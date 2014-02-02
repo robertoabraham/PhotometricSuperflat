@@ -113,13 +113,13 @@ namespace pcl
             if ( !File::Exists( instance.starDatabasePath ) )
                 throw Error( "No such file: " + instance.starDatabasePath );
             S = new PolynomialSurface( instance.starDatabasePath, image.Width(), image.Height() );
-            S->PrintCatalog();
+            //S->PrintCatalog();
             S->PrintCatalogSummary();
             S->PlotXYKeyedToRelativeFlux(false);
             String eqn = S->ComputeBestFitModel(instance.fitDegree);
             S->PlotXYKeyedToRelativeFlux(true);
             S->ShowBestFitModelImage();
-            
+            delete(S);
         };
         
         

@@ -113,16 +113,11 @@ namespace pcl {
             File dataFile;
             File gnuFile;
             File svgFile;
-            String svgFilePath;
 
             String tmpDir = File().SystemTempDirectory();
-            String dataFilepath = tmpDir + "/plotcatalogxy.dat";
-            String gnuFilePath = tmpDir + "/plotcatalogxy.gnu";
-
-            if (!useCorrection)
-                svgFilePath = tmpDir + "/relativeFlux.svg";
-            else
-                svgFilePath = tmpDir + "/correctedRelativeFlux.svg";    
+            String dataFilepath = File().UniqueFileName(tmpDir,8,"",".dat");
+            String gnuFilepath = File().UniqueFileName(tmpDir,8,"",".gnu");
+            String svgFilepath = File().UniqueFileName(tmpDir,8,"",".svg");
             
             // Make sure we're ready to plot the data.
             if (!relativeFluxesComputed)
@@ -146,15 +141,15 @@ namespace pcl {
             dataFile.Close();
 
             // Generate the plot commands
-            gnuFile.CreateForWriting(gnuFilePath);
+            gnuFile.CreateForWriting(gnuFilepath);
             gnuFile.OutTextLn("set terminal svg size 800,600 enhanced font 'helvetica,12'");
             gnuFile.OutTextLn("set object 1 rectangle from screen 0,0 to screen 1,1 fillcolor rgb'#ffffff' behind");
             gnuFile.OutTextLn("unset key");
-            gnuFile.OutTextLn(IsoString("set output '" + svgFilePath + "'"));
+            gnuFile.OutTextLn(IsoString("set output '" + svgFilepath + "'"));
             if (!useCorrection)
-                gnuFile.OutTextLn("set title 'Relative fluxes of calibration stars before Superflat correction' font 'helvetica,16' ");
+                gnuFile.OutTextLn("set title 'Relative fluxes of calibration stars before superflat correction' font 'helvetica,16' ");
             else
-                gnuFile.OutTextLn("set title 'Relative fluxes of calibration stars after Superflat correction' font 'helvetica,16' ");
+                gnuFile.OutTextLn("set title 'Relative fluxes of calibration stars after superflat correction' font 'helvetica,16' ");
             gnuFile.OutTextLn(IsoString().Format("set xrange [1:%d]", nx));
             gnuFile.OutTextLn(IsoString().Format("set yrange [1:%d]", ny));
             gnuFile.OutTextLn("set palette rgb 33,13,10");
@@ -164,10 +159,15 @@ namespace pcl {
 
             // Create the plot
             // ExternalProcess().ExecuteProgram(GetEnvironmentVariable( "PXI_BINDIR" ) + "/gnuplot ", gnuFilePath );
-            ExternalProcess().ExecuteProgram("/Applications/PixInsight.app/Contents/MacOS/gnuplot " + gnuFilePath);
+            ExternalProcess().ExecuteProgram("/Applications/PixInsight.app/Contents/MacOS/gnuplot " + gnuFilepath);
 
             // Display the plot window
-            ImageWindow().Open(svgFilePath)[0].Show();
+            ImageWindow().Open(svgFilepath)[0].Show();
+            
+            //Clean up
+            File().Remove(gnuFilepath);
+            File().Remove(dataFilepath);
+            File().Remove(svgFilepath);
         }
 
         void PrintCatalog() {
@@ -224,6 +224,7 @@ namespace pcl {
         String ComputeBestFitModel(int degree) {
 
             // Reset the model
+            Console().WriteLn(String().Format("Computing PolynomialSurface of degree %d.", degree));
             this->degree = degree;
             for (int i = 0; i < MAX_POLYNOMIAL_TERMS; i++)
                 this->coeffs[i] = 0.0;
@@ -474,8 +475,6 @@ namespace pcl {
                 AddStar(*s);
             }
             goodStars = Array<Star>(allStars);
-
-
         }
 
         void AddStar(Star& s) {
@@ -496,7 +495,7 @@ namespace pcl {
             for (unsigned int i = 0; i < goodStars.Length(); i++)
                 goodStars[i].relativeFlux = relative_flux[i];
             relativeFluxesComputed = true;
-            Console().WriteLn(String().Format("Computed relative fluxes for %d star.", goodStars.Length()));
+            Console().WriteLn(String().Format("Computed relative fluxes for %d stars.", goodStars.Length()));
         }
 
         void FilterStars() {
@@ -507,7 +506,7 @@ namespace pcl {
                 }
             }
             badStarsFilteredOut = true;
-            Console().WriteLn(String().Format("Filtered catalog. %d stars remain.", goodStars.Length()));
+            Console().WriteLn(String().Format("Filtered catalog contains %d stars.", goodStars.Length()));
         }
 
         double ValueAt(double x, double y) {
