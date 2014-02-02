@@ -158,15 +158,16 @@ namespace pcl {
             gnuFile.Close();
 
             
-            // Determine location of PixInsight executable from which we can infer the location of the
-            // gnuplot executable
-            StringList env = ExternalProcess().Environment();
-            Console().WriteLn("Known environment variables:");
-            for (StringList::const_iterator row = env.Begin(); row != env.End(); ++row) {
-                Console().WriteLn(*row);
-            }
-            //ExternalProcess().ExecuteProgram(GetEnvironmentVariable( "PXI_BINDIR" ) + "/gnuplot ", gnuFilepath );
-
+            // I need to determine the location of the PixInsight executable so I can 
+            // find the location of the gnuplot executable. I figured this might be in an
+            // environment variable but I can't seem to get at any environment variables. For now
+            // I will just hard-code the path to the executable
+            //
+            //StringList env = ExternalProcess().Environment();
+            //Console().WriteLn("Known environment variables:");
+            //for (StringList::const_iterator row = env.Begin(); row != env.End(); ++row) {
+            //    Console().WriteLn(*row);
+            //}
             
             // Create the plot
             ExternalProcess().ExecuteProgram("/Applications/PixInsight.app/Contents/MacOS/gnuplot " + gnuFilepath);
