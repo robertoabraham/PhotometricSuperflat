@@ -157,8 +157,18 @@ namespace pcl {
             gnuFile.Flush();
             gnuFile.Close();
 
+            
+            // Determine location of PixInsight executable from which we can infer the location of the
+            // gnuplot executable
+            StringList env = ExternalProcess().Environment();
+            Console().WriteLn("Known environment variables:");
+            for (StringList::const_iterator row = env.Begin(); row != env.End(); ++row) {
+                Console().WriteLn(*row);
+            }
+            //ExternalProcess().ExecuteProgram(GetEnvironmentVariable( "PXI_BINDIR" ) + "/gnuplot ", gnuFilepath );
+
+            
             // Create the plot
-            // ExternalProcess().ExecuteProgram(GetEnvironmentVariable( "PXI_BINDIR" ) + "/gnuplot ", gnuFilePath );
             ExternalProcess().ExecuteProgram("/Applications/PixInsight.app/Contents/MacOS/gnuplot " + gnuFilepath);
 
             // Display the plot window
@@ -187,7 +197,7 @@ namespace pcl {
             bool floatSample = true;
             bool isColor = false;
             bool initialProcessing = true;
-            String id = "foo";
+            String id = "Superflat";
 
 
             Console().WriteLn(String().Format("Creating array with dimensions %d x %d", this->nx, this->ny));
