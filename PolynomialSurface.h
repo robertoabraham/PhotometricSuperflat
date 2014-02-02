@@ -17,6 +17,7 @@ namespace pcl {
     // ----------------------------------------------------------------------------
 
     class Star {
+        
     public:
 
         String date_obs;
@@ -90,18 +91,6 @@ namespace pcl {
     class PolynomialSurface {
     public:
 
-        Array<Star> allStars;
-        Array<Star> goodStars;
-        double coeffs[MAX_POLYNOMIAL_TERMS]; // Coefficients of the best-fit polynomial
-        int degree; // Degree of the best-fit polynomial (0=constant, 1=plane, etc)
-        int nterms; // Number of terms in the best-fit polynomial
-        int nx; // X dimension of input image
-        int ny; // Y dimension of input image
-        String equation; // Pretty-printed string describing the best fit polynomial
-        double signalToNoiseLevelCut; // Minimum signal-to-noise of stars to include in the computation
-        bool badStarsFilteredOut; // Have bad stars already been removed?
-        bool relativeFluxesComputed; // Have relative fluxes already been computed? 
-
         PolynomialSurface(const String& fileName = String(), int nx = 0, int ny = 0) {
             // Initialize everything
             this->nx = nx;
@@ -111,6 +100,7 @@ namespace pcl {
             signalToNoiseLevelCut = 0.0;
             badStarsFilteredOut = false;
             relativeFluxesComputed = false;
+            modelComputed = false;
 
             if (!fileName.IsEmpty())
                 ReadStarCatalog(fileName);
@@ -119,15 +109,20 @@ namespace pcl {
         virtual ~PolynomialSurface() {
         }
 
-        void PlotXYKeyedToRelativeFlux() {
+        void PlotXYKeyedToRelativeFlux(bool useCorrection) {
             File dataFile;
             File gnuFile;
             File svgFile;
+            String svgFilePath;
 
             String tmpDir = File().SystemTempDirectory();
             String dataFilepath = tmpDir + "/plotcatalogxy.dat";
             String gnuFilePath = tmpDir + "/plotcatalogxy.gnu";
-            String svgFilePath = tmpDir + "/plotcatalogxy.svg";
+
+            if (!useCorrection)
+                svgFilePath = tmpDir + "/relativeFlux.svg";
+            else
+                svgFilePath = tmpDir + "/correctedRelativeFlux.svg";    
             
             // Make sure we're ready to plot the data.
             if (!relativeFluxesComputed)
@@ -136,15 +131,16 @@ namespace pcl {
             // Generate the data table, but clip it.
             dataFile.CreateForWriting(dataFilepath);
             for (Array<Star>::iterator s = goodStars.Begin(); s != goodStars.End(); ++s) {
+                double correction = 1.0;
                 double clippedRelativeFlux;
-                if (s->relativeFlux > 1.2)
+                if (useCorrection)
+                    correction = ValueAt(s->imgcx, s->imgcy);
+                clippedRelativeFlux = (s->relativeFlux) / correction;
+                if (clippedRelativeFlux > 1.2)
                     clippedRelativeFlux = 1.2;
-                else if (s->relativeFlux < 0.8)
+                if (clippedRelativeFlux < 0.8)
                     clippedRelativeFlux = 0.8;
-                else
-                    clippedRelativeFlux = s->relativeFlux;
-                dataFile.OutTextLn(IsoString().Format("%8g   %8g    %8g    %8g", 
-                        s->imgcx, s->imgcy, clippedRelativeFlux, s->snr8));
+                dataFile.OutTextLn(IsoString().Format("%8g   %8g    %8g    %g", s->imgcx, s->imgcy, clippedRelativeFlux,  correction));
             }
             dataFile.Flush();
             dataFile.Close();
@@ -153,12 +149,15 @@ namespace pcl {
             gnuFile.CreateForWriting(gnuFilePath);
             gnuFile.OutTextLn("set terminal svg size 800,600 enhanced font 'helvetica,12'");
             gnuFile.OutTextLn("set object 1 rectangle from screen 0,0 to screen 1,1 fillcolor rgb'#ffffff' behind");
-            //gnuFile.OutTextLn( "set style line 1 lc rgb 'red' pt 7 ps 0.3");
             gnuFile.OutTextLn("unset key");
             gnuFile.OutTextLn(IsoString("set output '" + svgFilePath + "'"));
-            gnuFile.OutTextLn("set title 'Photometric calibration stars' font 'helvetica,16' ");
+            if (!useCorrection)
+                gnuFile.OutTextLn("set title 'Relative fluxes of calibration stars before Superflat correction' font 'helvetica,16' ");
+            else
+                gnuFile.OutTextLn("set title 'Relative fluxes of calibration stars after Superflat correction' font 'helvetica,16' ");
             gnuFile.OutTextLn(IsoString().Format("set xrange [1:%d]", nx));
             gnuFile.OutTextLn(IsoString().Format("set yrange [1:%d]", ny));
+            gnuFile.OutTextLn("set palette rgb 33,13,10");
             gnuFile.OutTextLn(IsoString("plot '" + dataFilepath + "' using 1:2:3 lt pal pt 7 ps 0.5"));
             gnuFile.Flush();
             gnuFile.Close();
@@ -433,9 +432,10 @@ namespace pcl {
             this->equation = result;
 
             // Store the result
-            for (int i = 0; i<this->degree; i++)
+            for (int i = 0; i<nterms; i++)
                 this->coeffs[i] = (double) A[0][i];
 
+            modelComputed = true;
             return (this->equation);
 
         }
@@ -446,6 +446,18 @@ namespace pcl {
     private:
 
         File file;
+        Array<Star> allStars;
+        Array<Star> goodStars;
+        double coeffs[MAX_POLYNOMIAL_TERMS]; // Coefficients of the best-fit polynomial
+        int degree; // Degree of the best-fit polynomial (0=constant, 1=plane, etc)
+        int nterms; // Number of terms in the best-fit polynomial
+        int nx; // X dimension of input image
+        int ny; // Y dimension of input image
+        String equation; // Pretty-printed string describing the best fit polynomial
+        double signalToNoiseLevelCut; // Minimum signal-to-noise of stars to include in the computation
+        bool badStarsFilteredOut; // Have bad stars already been removed?
+        bool relativeFluxesComputed; // Have relative fluxes already been computed? 
+        bool modelComputed; // Surface has been defined
 
         void ReadStarCatalog(const String& fileName) {
             IsoStringList lines;
@@ -517,8 +529,8 @@ namespace pcl {
             t[12] = x * x * x * y;
             t[13] = x * x * x * x;
             t[14] = y * y * y * y;
-
-            val = 0;
+            
+            val = 0.0;
             for (int i = 0; i < nterms; i++) {
                 val += this->coeffs[i] * t[i];
             }

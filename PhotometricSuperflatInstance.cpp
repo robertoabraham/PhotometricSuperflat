@@ -115,8 +115,9 @@ namespace pcl
             S = new PolynomialSurface( instance.starDatabasePath, image.Width(), image.Height() );
             S->PrintCatalog();
             S->PrintCatalogSummary();
-            S->PlotXYKeyedToRelativeFlux();
+            S->PlotXYKeyedToRelativeFlux(false);
             String eqn = S->ComputeBestFitModel(instance.fitDegree);
+            S->PlotXYKeyedToRelativeFlux(true);
             S->ShowBestFitModelImage();
             
         };
