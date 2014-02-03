@@ -17,8 +17,8 @@ some function using the PixelMath module. (It's obviously important that you
 modify the image using some sort of multiplicative process and not an additive
 process). Run the AperturePhotometry script on the simulated image to generate
 a catalog. Then fire up the PhotometricSuperflat process and click on the
-button to select the catalog (whose filename will end with _WCS.csv). Then
-drag the process icon onto the image you have just photometered to generate the
+button to select the catalog (whose filename will end with _WCS.csv). 
+Drag the process icon onto the image you have just photometered to generate the
 Superflat and diagnostic plots.
 
 Notes on modifying the source code
