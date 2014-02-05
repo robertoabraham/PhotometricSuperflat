@@ -3,6 +3,15 @@ This file is part of the PhotometricSuperflat PixInsight module.
 
 Copyright (c) 2014, Roberto Abraham. All Rights Reserved.
 
+This software is released under the terms of the PixInsight Class Library
+License Version 1.0.
+
+*******************************************************************************
+PixInsight Class Library License Version 1.0
+*******************************************************************************
+
+Copyright (c) 2003-2011, Pleiades Astrophoto S.L. All Rights Reserved.
+
 Redistribution and use in both source and binary forms, with or without
 modification, is permitted provided that the following conditions are met:
 
